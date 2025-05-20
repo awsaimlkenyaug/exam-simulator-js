@@ -13,14 +13,30 @@ const VCEParser = {
      */
     async parse(file) {
         try {
-            // Read the file as text
+            console.log('Starting to parse VCE file:', file.name);
+            
+            // Read the file as binary first to check for binary format
+            const arrayBuffer = await this.readFileAsArrayBuffer(file);
+            
+            // Check if this is a binary file with specific headers
+            const isBinary = this.checkForBinaryFormat(arrayBuffer);
+            
+            if (isBinary) {
+                console.log('Detected binary VCE format');
+                return this.parseBinaryVCE(arrayBuffer);
+            }
+            
+            // If not binary, try as text
+            console.log('Trying text-based parsing');
             const text = await this.readFileAsText(file);
             
             // Try to parse as JSON first (some VCE files are JSON-based)
             try {
+                console.log('Attempting JSON parsing');
                 const jsonData = JSON.parse(text);
                 return this.parseFromJSON(jsonData);
             } catch (jsonError) {
+                console.log('JSON parsing failed, trying text parsing');
                 // If JSON parsing fails, try to parse as text
                 return this.parseFromText(text);
             }
@@ -28,6 +44,76 @@ const VCEParser = {
             console.error('Error parsing VCE file:', error);
             throw new Error(`Failed to parse VCE file: ${error.message}`);
         }
+    },
+    
+    /**
+     * Read a file as ArrayBuffer
+     * @param {File} file - The file to read
+     * @returns {Promise<ArrayBuffer>} - The file contents as ArrayBuffer
+     */
+    async readFileAsArrayBuffer(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.readAsArrayBuffer(file);
+        });
+    },
+    
+    /**
+     * Check if the file has a binary VCE format
+     * @param {ArrayBuffer} buffer - The file contents
+     * @returns {boolean} - True if the file appears to be binary VCE
+     */
+    checkForBinaryFormat(buffer) {
+        // This is a simplified check - real implementation would need to know
+        // the actual binary format specifications
+        const header = new Uint8Array(buffer, 0, 8);
+        
+        // Look for common binary file signatures
+        // This is just a placeholder - real implementation would check for actual VCE signatures
+        const possibleSignatures = [
+            [0x56, 0x43, 0x45, 0x00], // "VCE\0"
+            [0x45, 0x58, 0x41, 0x4D]  // "EXAM"
+        ];
+        
+        for (const signature of possibleSignatures) {
+            let matches = true;
+            for (let i = 0; i < signature.length; i++) {
+                if (header[i] !== signature[i]) {
+                    matches = false;
+                    break;
+                }
+            }
+            if (matches) return true;
+        }
+        
+        return false;
+    },
+    
+    /**
+     * Parse binary VCE format
+     * @param {ArrayBuffer} buffer - The file contents
+     * @returns {Array} - Array of question objects
+     */
+    parseBinaryVCE(buffer) {
+        // This is a placeholder for binary VCE parsing
+        // Real implementation would need to know the actual binary format
+        console.log('Binary VCE parsing not fully implemented');
+        
+        // For now, return a sample question to show something
+        return [{
+            text: "This is a sample question extracted from binary VCE. The parser needs to be updated to fully support this format.",
+            options: [
+                "Option A - This is just a placeholder",
+                "Option B - The actual parsing depends on the binary format",
+                "Option C - Please provide more details about the VCE format",
+                "Option D - Or share a sample file for analysis"
+            ],
+            correctAnswer: 0,
+            explanation: "This is a placeholder explanation. The actual VCE binary format parsing is not implemented.",
+            userAnswer: null
+        }];
     },
     
     /**
@@ -236,6 +322,51 @@ const VCEParser = {
                         console.warn('Failed to parse question match:', error);
                     }
                 });
+            }
+        }
+        
+        // If still no questions found, try a more generic approach
+        if (questions.length === 0) {
+            console.log('Trying more generic parsing approach');
+            
+            // Try to find any text that looks like a question with options
+            const lines = text.split(/\n|\r\n?/).filter(Boolean).map(line => line.trim());
+            let currentQuestion = null;
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                
+                // Look for lines that might be questions (ending with ? or having substantial length)
+                if (!currentQuestion && (line.endsWith('?') || line.length > 50)) {
+                    currentQuestion = {
+                        text: line,
+                        options: [],
+                        correctAnswer: 0,
+                        explanation: '',
+                        userAnswer: null
+                    };
+                    continue;
+                }
+                
+                // If we have a current question, look for options
+                if (currentQuestion) {
+                    const optionMatch = line.match(/^([A-D])[\.)\s]+(.+)$/);
+                    if (optionMatch) {
+                        const optionIndex = optionMatch[1].charCodeAt(0) - 65;
+                        currentQuestion.options[optionIndex] = optionMatch[2].trim();
+                    }
+                    
+                    // If we have at least 2 options and the next line doesn't look like an option,
+                    // or we've reached the end, save the question
+                    const nextLine = i < lines.length - 1 ? lines[i + 1] : '';
+                    const nextIsOption = nextLine.match(/^[A-D][\.)\s]+/);
+                    
+                    if (currentQuestion.options.length >= 2 && 
+                        (!nextIsOption || i === lines.length - 1)) {
+                        questions.push(currentQuestion);
+                        currentQuestion = null;
+                    }
+                }
             }
         }
         

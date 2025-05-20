@@ -47,10 +47,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (fileInput.files.length > 0) {
             const file = fileInput.files[0];
             fileInfo.textContent = `Selected file: ${file.name}`;
+            // Enable start button when file is selected
+            startExamButton.disabled = false;
         } else {
             fileInfo.textContent = 'No file selected';
+            startExamButton.disabled = true;
         }
     });
+    
+    // Disable start button initially
+    startExamButton.disabled = true;
     
     // Start exam button click handler
     startExamButton.addEventListener('click', async () => {
@@ -89,7 +95,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             loadingIndicator.classList.add('hidden');
-            alert(`Error: ${error.message}`);
+            console.error('Error loading exam:', error);
+            alert(`Error: ${error.message}\n\nPlease try a different file or format.`);
         }
     });
     
