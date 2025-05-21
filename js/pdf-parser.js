@@ -117,8 +117,9 @@ const PDFParser = {
   extractQuestionsFromText(text) {
     const questions = [];
     
-    // Pattern 1: Question number followed by text, then options A, B, C, D
-    const questionPattern1 = /(?:Question|Q)?[\s\.:]?(\d+)[\.\s:]+([\s\S]+?)(?=(?:[Aa][\.\s:]+))([\s\S]+?)(?=(?:[Bb][\.\s:]+))([\s\S]+?)(?=(?:[Cc][\.\s:]+))([\s\S]+?)(?=(?:[Dd][\.\s:]+))([\s\S]+?)(?=(?:(?:Question|Q)?[\s\.:]?\d+|Answer|Correct|$))/gi;
+    // Pattern 1: Question number followed by text, then options A., B., C., D.
+    // Strictly using capital letters followed by a period for options
+    const questionPattern1 = /(?:Question|Q)?[\s\.:]?(\d+)[\.\s:]+([\s\S]+?)(?=(?:A\.[\s]+))([\s\S]+?)(?=(?:B\.[\s]+))([\s\S]+?)(?=(?:C\.[\s]+))([\s\S]+?)(?=(?:D\.[\s]+))([\s\S]+?)(?=(?:(?:Question|Q)?[\s\.:]?\d+|Answer|Correct|$))/gi;
     
     // Try first pattern
     let match;
@@ -126,17 +127,17 @@ const PDFParser = {
       const [, num, questionText, optionA, optionB, optionC, optionD] = match;
       
       // Look for the answer and explanation after this question
-      const answerPattern = new RegExp(`Answer(?:\\s*for)?\\s*(?:question)?\\s*${num}?[\.:\\s]+([A-Da-d])`, 'i');
+      const answerPattern = new RegExp(`Answer(?:\\s*for)?\\s*(?:question)?\\s*${num}?[\.:\\s]+([A-D])`, 'i');
       const answerMatch = text.substring(match.index + match[0].length, match.index + match[0].length + 200).match(answerPattern);
       
       const explanationPattern = new RegExp(`Explanation(?:\\s*for)?\\s*(?:question)?\\s*${num}?[\.:\\s]+([^\\n]+)`, 'i');
       const explanationMatch = text.substring(match.index + match[0].length, match.index + match[0].length + 500).match(explanationPattern);
       
       // Clean up options (remove A., B., etc.)
-      const cleanOptionA = optionA.replace(/^[Aa][\.\s:]+/, '').trim();
-      const cleanOptionB = optionB.replace(/^[Bb][\.\s:]+/, '').trim();
-      const cleanOptionC = optionC.replace(/^[Cc][\.\s:]+/, '').trim();
-      const cleanOptionD = optionD.replace(/^[Dd][\.\s:]+/, '').trim();
+      const cleanOptionA = optionA.replace(/^A\.[\s]+/, '').trim();
+      const cleanOptionB = optionB.replace(/^B\.[\s]+/, '').trim();
+      const cleanOptionC = optionC.replace(/^C\.[\s]+/, '').trim();
+      const cleanOptionD = optionD.replace(/^D\.[\s]+/, '').trim();
       
       // Map the answer letter to index
       let correctAnswer = 0; // Default to A if not found
@@ -173,43 +174,48 @@ const PDFParser = {
         // Skip short sections that are unlikely to be questions
         if (section.length < 20) continue;
         
-        // Look for option patterns
-        const optionMatches = section.match(/(?:[A-D][\.\s:)]|\([A-D]\))\s+[^\n]+/gi);
+        // Look for option patterns - strictly capital letters followed by period
+        const optionMatches = section.match(/A\.\s+[^\n]+(?:\n|\r\n?)+B\.\s+[^\n]+(?:\n|\r\n?)+C\.\s+[^\n]+(?:\n|\r\n?)+D\.\s+[^\n]+/g);
         
-        if (optionMatches && optionMatches.length >= 3) { // At least 3 options to be a valid question
+        if (optionMatches && optionMatches.length > 0) {
           // Extract question text (everything before first option)
-          const firstOptionIndex = section.indexOf(optionMatches[0]);
+          const firstOptionIndex = section.indexOf('A.');
           if (firstOptionIndex <= 0) continue;
           
           const questionText = section.substring(0, firstOptionIndex).trim();
           
           if (questionText.length > 10) { // Ensure we have a substantial question
-            // Extract options
-            const options = optionMatches.slice(0, 4).map(opt => 
-              opt.replace(/^(?:[A-D][\.\s:)]|\([A-D]\))\s+/i, '').trim()
-            );
+            // Extract individual options
+            const optionA = section.match(/A\.\s+([^\n]+)/);
+            const optionB = section.match(/B\.\s+([^\n]+)/);
+            const optionC = section.match(/C\.\s+([^\n]+)/);
+            const optionD = section.match(/D\.\s+([^\n]+)/);
             
-            // Pad with empty options if we have fewer than 4
-            while (options.length < 4) {
-              options.push("(No option provided)");
+            if (optionA && optionB && optionC && optionD) {
+              const options = [
+                optionA[1].trim(),
+                optionB[1].trim(),
+                optionC[1].trim(),
+                optionD[1].trim()
+              ];
+              
+              // Look for answer indication
+              const answerMatch = section.match(/(?:answer|correct)[^A-D]*(A|B|C|D)/i);
+              let correctAnswer = 0;
+              
+              if (answerMatch) {
+                const answerLetter = answerMatch[1].toUpperCase();
+                correctAnswer = 'ABCD'.indexOf(answerLetter);
+              }
+              
+              questions.push({
+                text: questionText,
+                options,
+                correctAnswer,
+                explanation: '',
+                userAnswer: null
+              });
             }
-            
-            // Look for answer indication
-            const answerMatch = section.match(/(?:answer|correct)[^A-D]*(A|B|C|D)/i);
-            let correctAnswer = 0;
-            
-            if (answerMatch) {
-              const answerLetter = answerMatch[1].toUpperCase();
-              correctAnswer = 'ABCD'.indexOf(answerLetter);
-            }
-            
-            questions.push({
-              text: questionText,
-              options,
-              correctAnswer,
-              explanation: '',
-              userAnswer: null
-            });
           }
         }
       }
@@ -234,21 +240,21 @@ const PDFParser = {
       // Skip very short blocks
       if (block.length < 50) continue;
       
-      // Look for options (A., B., C., D. or similar patterns)
-      const optionAMatch = block.match(/[Aa][\.\s:)]\s+([^\n]+)/);
-      const optionBMatch = block.match(/[Bb][\.\s:)]\s+([^\n]+)/);
-      const optionCMatch = block.match(/[Cc][\.\s:)]\s+([^\n]+)/);
-      const optionDMatch = block.match(/[Dd][\.\s:)]\s+([^\n]+)/);
+      // Look for options - strictly capital letters followed by period
+      const optionAMatch = block.match(/A\.\s+([^\n]+)/);
+      const optionBMatch = block.match(/B\.\s+([^\n]+)/);
+      const optionCMatch = block.match(/C\.\s+([^\n]+)/);
+      const optionDMatch = block.match(/D\.\s+([^\n]+)/);
       
-      // If we found at least 3 options, consider it a question
-      if (optionAMatch && optionBMatch && optionCMatch) {
+      // If we found all four options, consider it a question
+      if (optionAMatch && optionBMatch && optionCMatch && optionDMatch) {
         // Extract question text (everything before the first option)
         let questionText = "";
         const optionIndices = [
-          block.indexOf(optionAMatch[0]),
-          block.indexOf(optionBMatch[0]),
-          block.indexOf(optionCMatch[0]),
-          optionDMatch ? block.indexOf(optionDMatch[0]) : -1
+          block.indexOf('A.'),
+          block.indexOf('B.'),
+          block.indexOf('C.'),
+          block.indexOf('D.')
         ].filter(idx => idx >= 0);
         
         const firstOptionIndex = Math.min(...optionIndices);
@@ -269,10 +275,10 @@ const PDFParser = {
         if (questionText.length >= 10) {
           // Extract options
           const options = [
-            optionAMatch ? optionAMatch[1].trim() : "(Option A not found)",
-            optionBMatch ? optionBMatch[1].trim() : "(Option B not found)",
-            optionCMatch ? optionCMatch[1].trim() : "(Option C not found)",
-            optionDMatch ? optionDMatch[1].trim() : "(Option D not found)"
+            optionAMatch[1].trim(),
+            optionBMatch[1].trim(),
+            optionCMatch[1].trim(),
+            optionDMatch[1].trim()
           ];
           
           // Look for answer indication
@@ -313,17 +319,17 @@ const PDFParser = {
           const questionIndex = text.indexOf(questionText);
           const textAfterQuestion = text.substring(questionIndex + questionText.length, questionIndex + questionText.length + 500);
           
-          const optionAMatch = textAfterQuestion.match(/[Aa][\.\s:)]\s+([^\n]+)/);
-          const optionBMatch = textAfterQuestion.match(/[Bb][\.\s:)]\s+([^\n]+)/);
-          const optionCMatch = textAfterQuestion.match(/[Cc][\.\s:)]\s+([^\n]+)/);
-          const optionDMatch = textAfterQuestion.match(/[Dd][\.\s:)]\s+([^\n]+)/);
+          const optionAMatch = textAfterQuestion.match(/A\.\s+([^\n]+)/);
+          const optionBMatch = textAfterQuestion.match(/B\.\s+([^\n]+)/);
+          const optionCMatch = textAfterQuestion.match(/C\.\s+([^\n]+)/);
+          const optionDMatch = textAfterQuestion.match(/D\.\s+([^\n]+)/);
           
-          if (optionAMatch && optionBMatch && optionCMatch) {
+          if (optionAMatch && optionBMatch && optionCMatch && optionDMatch) {
             const options = [
-              optionAMatch ? optionAMatch[1].trim() : "(Option A not found)",
-              optionBMatch ? optionBMatch[1].trim() : "(Option B not found)",
-              optionCMatch ? optionCMatch[1].trim() : "(Option C not found)",
-              optionDMatch ? optionDMatch[1].trim() : "(Option D not found)"
+              optionAMatch[1].trim(),
+              optionBMatch[1].trim(),
+              optionCMatch[1].trim(),
+              optionDMatch[1].trim()
             ];
             
             questions.push({
