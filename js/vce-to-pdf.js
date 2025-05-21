@@ -10,6 +10,11 @@ const VCEToPDFConverter = {
      * @returns {Blob} - PDF file as a Blob
      */
     convertToPDF(questions, examTitle = 'Exam Questions') {
+        // Validate input
+        if (!questions || !Array.isArray(questions) || questions.length === 0) {
+            throw new Error('No valid questions provided for PDF generation');
+        }
+        
         // Create a new jsPDF instance
         const doc = new jspdf.jsPDF();
         
@@ -45,6 +50,12 @@ const VCEToPDFConverter = {
         doc.setFontSize(12);
         
         questions.forEach((question, index) => {
+            // Validate question object
+            if (!question || typeof question !== 'object') {
+                console.warn(`Skipping invalid question at index ${index}`);
+                return;
+            }
+            
             // Check if we need a new page
             if (y > doc.internal.pageSize.getHeight() - 40) {
                 doc.addPage();
@@ -59,20 +70,25 @@ const VCEToPDFConverter = {
             
             // Question text with word wrap
             doc.setFont('helvetica', 'normal');
-            const questionLines = doc.splitTextToSize(question.text, textWidth);
+            const questionText = question.text || 'Question text not available';
+            const questionLines = doc.splitTextToSize(questionText, textWidth);
             doc.text(questionLines, margin, y);
             y += questionLines.length * 7 + 5;
             
             // Options
             const optionLabels = ['A', 'B', 'C', 'D'];
-            question.options.forEach((option, optIndex) => {
+            
+            // Ensure options is an array
+            const options = Array.isArray(question.options) ? question.options : [];
+            
+            options.forEach((option, optIndex) => {
                 // Check if we need a new page
                 if (y > doc.internal.pageSize.getHeight() - 30) {
                     doc.addPage();
                     y = 20;
                 }
                 
-                const optionText = `${optionLabels[optIndex]}. ${option}`;
+                const optionText = `${optionLabels[optIndex]}. ${option || 'Option not available'}`;
                 const optionLines = doc.splitTextToSize(optionText, textWidth - 5);
                 doc.text(optionLines, margin + 5, y);
                 y += optionLines.length * 7 + 3;
@@ -85,9 +101,34 @@ const VCEToPDFConverter = {
             }
             
             doc.setFont('helvetica', 'bold');
-            const correctAnswer = `Answer: ${optionLabels[question.correctAnswer]}`;
+            const correctAnswerIndex = typeof question.correctAnswer === 'number' && 
+                                      question.correctAnswer >= 0 && 
+                                      question.correctAnswer < optionLabels.length ? 
+                                      question.correctAnswer : 0;
+            const correctAnswer = `Answer: ${optionLabels[correctAnswerIndex]}`;
             doc.text(correctAnswer, margin, y);
             y += 7;
+            
+            // User's answer
+            if (question.userAnswer !== null && question.userAnswer !== undefined) {
+                const userAnswerIndex = typeof question.userAnswer === 'number' && 
+                                       question.userAnswer >= 0 && 
+                                       question.userAnswer < optionLabels.length ? 
+                                       question.userAnswer : null;
+                
+                if (userAnswerIndex !== null) {
+                    const userAnswer = `Your answer: ${optionLabels[userAnswerIndex]}`;
+                    doc.text(userAnswer, margin, y);
+                    y += 7;
+                    
+                    // Indicate if correct or incorrect
+                    const isCorrect = question.userAnswer === question.correctAnswer;
+                    doc.setTextColor(isCorrect ? 0, 128, 0 : 255, 0, 0);
+                    doc.text(isCorrect ? 'Correct' : 'Incorrect', margin, y);
+                    doc.setTextColor(0, 0, 0); // Reset text color
+                    y += 7;
+                }
+            }
             
             // Explanation (if available)
             if (question.explanation) {
