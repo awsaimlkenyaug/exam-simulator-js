@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const fileInput = document.getElementById('exam-file');
     const fileInfo = document.querySelector('.file-info');
     const startExamButton = document.getElementById('start-exam');
+    const convertToPdfButton = document.getElementById('convert-to-pdf');
     const loadingIndicator = document.getElementById('loading-indicator');
     const examContainer = document.getElementById('exam-container');
     const resultsContainer = document.getElementById('results-container');
@@ -31,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const percentageElement = document.getElementById('percentage');
     const reviewExamButton = document.getElementById('review-exam');
     const newExamButton = document.getElementById('new-exam');
+    const downloadPdfButton = document.getElementById('download-pdf');
     
     // Mode selection
     const modeRadios = document.querySelectorAll('input[name="mode"]');
@@ -49,14 +51,17 @@ document.addEventListener('DOMContentLoaded', () => {
             fileInfo.textContent = `Selected file: ${file.name}`;
             // Enable start button when file is selected
             startExamButton.disabled = false;
+            convertToPdfButton.disabled = false;
         } else {
             fileInfo.textContent = 'No file selected';
             startExamButton.disabled = true;
+            convertToPdfButton.disabled = true;
         }
     });
     
     // Disable start button initially
     startExamButton.disabled = true;
+    convertToPdfButton.disabled = true;
     
     // Start exam button click handler
     startExamButton.addEventListener('click', async () => {
@@ -97,6 +102,48 @@ document.addEventListener('DOMContentLoaded', () => {
             loadingIndicator.classList.add('hidden');
             console.error('Error loading exam:', error);
             alert(`Error: ${error.message}\n\nPlease try a different file or format.`);
+        }
+    });
+    
+    // Convert to PDF button click handler
+    convertToPdfButton.addEventListener('click', async () => {
+        if (!fileInput.files.length) {
+            alert('Please select a file first.');
+            return;
+        }
+        
+        const file = fileInput.files[0];
+        
+        // Only allow VCE files for conversion
+        if (!file.name.toLowerCase().endsWith('.vce') && 
+            !file.name.toLowerCase().endsWith('.vcex') && 
+            !file.name.toLowerCase().endsWith('.exam')) {
+            alert('Only VCE files can be converted to PDF. Please select a VCE file.');
+            return;
+        }
+        
+        // Show loading indicator
+        loadingIndicator.classList.remove('hidden');
+        loadingIndicator.querySelector('p').textContent = 'Converting VCE to PDF...';
+        
+        try {
+            // Generate PDF from VCE
+            const pdfBlob = await VCEToPDFConverter.generatePDFFromVCE(file);
+            
+            // Hide loading indicator
+            loadingIndicator.classList.add('hidden');
+            loadingIndicator.querySelector('p').textContent = 'Processing exam file...';
+            
+            // Download the PDF
+            const fileName = file.name.replace(/\.[^/.]+$/, '') + '.pdf';
+            VCEToPDFConverter.downloadPDF(pdfBlob, fileName);
+            
+            alert('PDF conversion complete! Your download should begin automatically.');
+        } catch (error) {
+            loadingIndicator.classList.add('hidden');
+            loadingIndicator.querySelector('p').textContent = 'Processing exam file...';
+            console.error('Error converting to PDF:', error);
+            alert(`Error converting to PDF: ${error.message}`);
         }
     });
     
@@ -154,30 +201,58 @@ document.addEventListener('DOMContentLoaded', () => {
         finishButton.classList.add('hidden');
     });
     
+    // Download PDF button click handler
+    downloadPdfButton.addEventListener('click', async () => {
+        // Show loading indicator
+        loadingIndicator.classList.remove('hidden');
+        loadingIndicator.querySelector('p').textContent = 'Generating PDF...';
+        
+        try {
+            // Get exam results
+            const results = examSimulator.getResults();
+            
+            // Generate PDF from results
+            const examTitle = `Exam Results - Score: ${results.score}/${results.totalQuestions} (${results.percentage}%)`;
+            const pdfBlob = VCEToPDFConverter.convertToPDF(results.questions, examTitle);
+            
+            // Hide loading indicator
+            loadingIndicator.classList.add('hidden');
+            loadingIndicator.querySelector('p').textContent = 'Processing exam file...';
+            
+            // Download the PDF
+            VCEToPDFConverter.downloadPDF(pdfBlob, 'exam_results.pdf');
+        } catch (error) {
+            loadingIndicator.classList.add('hidden');
+            loadingIndicator.querySelector('p').textContent = 'Processing exam file...';
+            console.error('Error generating PDF:', error);
+            alert(`Error generating PDF: ${error.message}`);
+        }
+    });
+    
     // Start screen button handler
-    document.getElementById('startGameButton').addEventListener('click', () => {
-        document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('startGameButton')?.addEventListener('click', () => {
+        document.getElementById('startScreen')?.classList.add('hidden');
     });
     
     // Play again button handler
-    document.getElementById('playAgainButton').addEventListener('click', () => {
-        document.getElementById('gameOverScreen').classList.add('hidden');
+    document.getElementById('playAgainButton')?.addEventListener('click', () => {
+        document.getElementById('gameOverScreen')?.classList.add('hidden');
         newExamButton.click();
     });
     
     // Settings button handler
-    document.getElementById('settingsButton').addEventListener('click', () => {
-        document.getElementById('settingsPanel').classList.remove('hidden');
+    document.getElementById('settingsButton')?.addEventListener('click', () => {
+        document.getElementById('settingsPanel')?.classList.remove('hidden');
     });
     
     // Save settings button handler
-    document.getElementById('saveSettingsButton').addEventListener('click', () => {
-        document.getElementById('settingsPanel').classList.add('hidden');
+    document.getElementById('saveSettingsButton')?.addEventListener('click', () => {
+        document.getElementById('settingsPanel')?.classList.add('hidden');
     });
     
     // Cancel settings button handler
-    document.getElementById('cancelSettingsButton').addEventListener('click', () => {
-        document.getElementById('settingsPanel').classList.add('hidden');
+    document.getElementById('cancelSettingsButton')?.addEventListener('click', () => {
+        document.getElementById('settingsPanel')?.classList.add('hidden');
     });
     
     /**
@@ -332,6 +407,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Hide the start screen after a short delay
     setTimeout(() => {
-        document.getElementById('startScreen').classList.add('hidden');
+        const startScreen = document.getElementById('startScreen');
+        if (startScreen) {
+            startScreen.classList.add('hidden');
+        }
     }, 1000);
 });

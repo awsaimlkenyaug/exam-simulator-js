@@ -14,6 +14,16 @@ A lightweight web-based exam simulator that can parse and display questions from
   - VCE files (Visual CertExam format)
   - PDF files with exam questions
 
+- **VCE to PDF Conversion**:
+  - Convert VCE files to downloadable PDF format
+  - Preserve questions, options, answers, and explanations
+  - Formatted for easy reading and printing
+
+- **Enhanced PDF Parsing**:
+  - Improved text extraction from PDF files
+  - Multiple parsing strategies for different PDF formats
+  - Better handling of question and answer patterns
+
 - **User-Friendly Interface**:
   - Clean, responsive design
   - Works on desktop and mobile devices
@@ -24,6 +34,7 @@ A lightweight web-based exam simulator that can parse and display questions from
   - Question explanations
   - Review mode after exam completion
   - Score and performance statistics
+  - Download exam results as PDF
 
 ## Getting Started
 
@@ -45,6 +56,8 @@ Alternatively, you can host the files on any web server.
 
 ## Usage
 
+### Taking an Exam
+
 1. Open the application in your web browser
 2. Select either "Study Mode" or "Exam Mode"
 3. Upload a VCE or PDF file containing exam questions
@@ -55,6 +68,13 @@ Alternatively, you can host the files on any web server.
 8. Click "Finish Exam" when you're done or when time expires
 9. Review your results and optionally review your answers
 
+### Converting VCE to PDF
+
+1. Upload a VCE file
+2. Click the "Convert to PDF" button
+3. The PDF will be generated and downloaded automatically
+4. Open the PDF in any PDF reader
+
 ## File Format Support
 
 ### VCE Files
@@ -62,12 +82,14 @@ Alternatively, you can host the files on any web server.
 The application attempts to parse VCE files in various formats:
 - JSON-based VCE files
 - Text-based VCE files with common question patterns
+- Binary VCE files (limited support)
 
 ### PDF Files
 
-The PDF parser extracts questions using pattern recognition:
-- Numbered questions with lettered options (A, B, C, D)
-- Answer indicators and explanations
+The enhanced PDF parser extracts questions using multiple strategies:
+- Pattern-based extraction for standard formats
+- Page-by-page analysis for complex layouts
+- Lenient parsing for non-standard formats
 
 ## Limitations
 
@@ -86,4 +108,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Acknowledgments
 
 - PDF.js for PDF parsing capabilities
+- jsPDF for PDF generation
 - The open-source community for inspiration and support

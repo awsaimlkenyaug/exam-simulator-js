@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="styles.css">
     <!-- PDF.js library for PDF parsing -->
     <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/build/pdf.min.js"></script>
+    <!-- jsPDF library for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -35,6 +37,7 @@
                     <input type="number" id="exam-duration" value="60" min="1" max="240">
                 </div>
                 <button id="start-exam" class="primary-button">Start Exam</button>
+                <button id="convert-to-pdf" class="secondary-button" disabled>Convert to PDF</button>
             </div>
         </div>
 
@@ -76,12 +79,14 @@
             <div class="results-actions">
                 <button id="review-exam" class="primary-button">Review Answers</button>
                 <button id="new-exam" class="secondary-button">New Exam</button>
+                <button id="download-pdf" class="secondary-button">Download as PDF</button>
             </div>
         </div>
     </div>
 
     <script src="js/vce-parser.js"></script>
     <script src="js/pdf-parser.js"></script>
+    <script src="js/vce-to-pdf.js"></script>
     <script src="js/exam-simulator.js"></script>
     <script src="js/app.js"></script>
 </body>
