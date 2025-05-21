@@ -97,6 +97,7 @@ input[type="file"] {
     display: flex;
     align-items: center;
     gap: 20px;
+    flex-wrap: wrap;
 }
 
 .setting {
@@ -127,6 +128,11 @@ input[type="number"] {
     background-color: #27ae60;
 }
 
+.primary-button:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
+}
+
 .secondary-button {
     padding: 10px 20px;
     background-color: #95a5a6;
@@ -141,6 +147,11 @@ input[type="number"] {
     background-color: #7f8c8d;
 }
 
+.secondary-button:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
+
 .nav-button {
     padding: 8px 15px;
     background-color: #ecf0f1;
@@ -152,6 +163,12 @@ input[type="number"] {
 
 .nav-button:hover {
     background-color: #dde4e6;
+}
+
+.nav-button:disabled {
+    background-color: #f5f5f5;
+    color: #bdc3c7;
+    cursor: not-allowed;
 }
 
 /* Loading indicator */
@@ -199,6 +216,16 @@ input[type="number"] {
     font-weight: bold;
     font-size: 1.2em;
     color: #e74c3c;
+}
+
+.timer.warning {
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
 }
 
 .question-container {
@@ -302,6 +329,7 @@ input[type="number"] {
     justify-content: center;
     gap: 20px;
     margin-top: 30px;
+    flex-wrap: wrap;
 }
 
 /* Responsive design */
