@@ -219,17 +219,34 @@ class ExamSimulator {
      * @returns {Object} - Exam results
      */
     getResults() {
+        // Ensure questions array exists
+        if (!this.questions || !Array.isArray(this.questions)) {
+            return {
+                score: 0,
+                totalQuestions: 0,
+                answeredQuestions: 0,
+                percentage: 0,
+                questions: []
+            };
+        }
+
         const answeredQuestions = this.questions.filter(q => 
             q.userAnswer !== null && q.userAnswer !== undefined
         ).length;
+
+        // Ensure we don't divide by zero
+        const percentage = this.questions.length > 0 
+            ? Math.round((this.score / this.questions.length) * 100)
+            : 0;
 
         return {
             score: this.score,
             totalQuestions: this.questions.length,
             answeredQuestions,
-            percentage: Math.round((this.score / this.questions.length) * 100),
+            percentage,
             questions: this.questions.map(q => ({
-                text: q.text,
+                text: q.text || 'Question text not available',
+                options: Array.isArray(q.options) ? q.options : [],
                 userAnswer: q.userAnswer,
                 correctAnswer: q.correctAnswer,
                 isCorrect: q.userAnswer === q.correctAnswer,

@@ -211,6 +211,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Get exam results
             const results = examSimulator.getResults();
             
+            // Validate that questions array exists and is not empty
+            if (!results.questions || !Array.isArray(results.questions) || results.questions.length === 0) {
+                throw new Error('No questions available to generate PDF');
+            }
+            
             // Generate PDF from results
             const examTitle = `Exam Results - Score: ${results.score}/${results.totalQuestions} (${results.percentage}%)`;
             const pdfBlob = VCEToPDFConverter.convertToPDF(results.questions, examTitle);
